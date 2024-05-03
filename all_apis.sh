@@ -9,6 +9,16 @@ curl --request GET \
 curl --request GET \
   --url http://localhost:8071/licensing-service/prod
 
+curl --request POST \
+  --url http://localhost:8071/encrypt \
+  --header 'Content-Type: text/plain' \
+  --data chinmay
+
+curl --request POST \
+  --url http://localhost:8071/decrypt \
+  --header 'Content-Type: text/plain' \
+  --data b997448739a92dc37c0f769cca893985775ce56cceaface34d16fbc21fce207f
+
 #licensing server :
 
 curl --request POST \
