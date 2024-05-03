@@ -1,0 +1,72 @@
+version: '3.7'
+services:
+  database:
+    image: postgres:latest
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: "chinmay"
+      POSTGRES_PASSWORD: "chinmay"
+      POSTGRES_DB:       "chinmay_dev"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/1-init.sql
+      - ./data.sql:/docker-entrypoint-initdb.d/2-data.sql
+    networks:
+      - chinmay_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  vault:
+    image: vault:1.13.3
+    container_name: vault
+    ports:
+      - "8200:8200"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: "myroot"
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+      VAULT_ADDR: "http://0.0.0.0:8200"
+    cap_add:
+      - IPC_LOCK
+    networks:
+      - chinmay_network
+
+  configserver:
+    image: chinmay/configurationserver:0.0.1-SNAPSHOT
+    container_name: configserver
+    ports:
+      - "8071:8071"
+    environment:
+      ENCRYPT_KEY: "fje83Ki8403Iod87dne7Yjsl3THueh48jfuO9j4U2hf64Lo"
+    networks:
+      - chinmay_network
+    depends_on:
+      vault:
+        condition: service_started
+
+  licensingservice:
+    image: chinmay/licensing-service:0.0.1-SNAPSHOT
+    container_name: licensingservice
+    environment:
+      PROFILE: "dev"
+      CONFIGSERVER_URI: "http://configserver:8071"
+      CONFIGSERVER_PORT:   "8071"
+      DATABASESERVER_PORT: "5432"
+      ENCRYPT_KEY:       "IMSYMMETRIC"
+    depends_on:
+      database:
+        condition: service_healthy
+      configserver:
+        condition: service_started
+    ports:
+      - "8080:8080"
+    networks:
+      - chinmay_network
+#docker network create -d bridge --subnet 172.18.0.0/24 --gateway 172.18.0.1 chinmay_network
+networks:
+  chinmay_network:
+      name: chinmay_network
+      external: true
